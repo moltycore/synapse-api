@@ -14,4 +14,7 @@ app.add_middleware(
 )
 
 # Gelen tüm istekleri gişeye (routes.py) yönlendir
+@app.get("/")
+async def root():
+    return {"durum": "Synapse Online", "mesaj": "Nexus Konseyi hazır."}
 app.include_router(router)
