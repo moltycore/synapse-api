@@ -9,7 +9,7 @@ def get_sme_res(soru):
     
     try:
         response = client.chat.completions.create(
-            model="gemma2-9b-it", # Groq üzerindeki hızlı ve iyi bir bedava model
+            model="llama-3.1-8b-instant", # Groq üzerindeki hızlı ve iyi bir bedava model
             messages=[
                 {"role": "system", "content": SME_SYSTEM},
                 {"role": "user", "content": soru}
