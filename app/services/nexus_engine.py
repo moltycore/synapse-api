@@ -1,4 +1,4 @@
-from app.agents.hf_agents import get_sme_res
+from app.agents.sme_agents import get_sme_res
 from app.agents.groq_agents import get_arastirmaci_res, get_denetci_res
 from app.agents.moderator_agents import get_moderator_res
 from app.agents.cohere_agents import get_basdanisman_res
