@@ -1,6 +1,6 @@
 from app.agents.hf_agents import get_sme_res
 from app.agents.groq_agents import get_arastirmaci_res, get_denetci_res
-from app.agents.deepseek_agents import get_moderator_res
+from app.agents.moderator_agents import get_moderator_res
 from app.agents.cohere_agents import get_basdanisman_res
 
 # Savaşın kaç el süreceğini belirleyen o meşhur limit.
@@ -26,7 +26,7 @@ def run_nexus_protocol(soru: str):
         # Denetçi acımaz, her turda sunulan yeni veriyi tekrar paramparça eder
         denetci_cevap = get_denetci_res(arastirma_cevap)
 
-    # 3. Moderatör (DeepSeek) masaya yumruğunu vurur. Kavga biter, kesin hüküm çıkar.
+    # 3. Moderatör (OpenRouter/Puter Hibrit) masaya yumruğunu vurur. Kavga biter, kesin hüküm çıkar.
     moderator_hukmu = get_moderator_res(soru, sme_veri, arastirma_cevap, denetci_cevap)
     
     # 4. Başdanışman (Cohere) hükmü alır, sokağa/kullanıcıya kendi fikriymiş gibi satar.
