@@ -5,3 +5,4 @@ cohere
 pydantic
 python-dotenv
 requests
+openai
