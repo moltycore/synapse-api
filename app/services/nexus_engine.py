@@ -1,42 +1,25 @@
-from app.agents.sme_agents import get_sme_res
-from app.agents.groq_agents import get_arastirmaci_res, get_denetci_res
-from app.agents.moderator_agents import get_moderator_res
-from app.agents.cohere_agents import get_basdanisman_res
+import requests
+from app.core.config import COHERE_KEY
+from app.prompts.nexus_prompts import BASDANISMAN_PREAMBLE
 
-# Savaşın kaç el süreceğini belirleyen o meşhur limit.
-MAX_ITERATION = 2
+def get_basdanisman_res(soru, moderator_hukmu):
+    url = "https://api.cohere.com/v1/chat"
+    headers = {"Authorization": f"Bearer {COHERE_KEY}"}
+    
+    # Soru ve hüküm artık tek pakette
+    sarsici_mesaj = f"Kullanıcının Sorusu: '{soru}'\n\nModeratör Hükmü: '{moderator_hukmu}'\n\nSana verilen bu hükmü baz alarak kullanıcının sorusuna mutlak bir raconla cevap ver. Element uydurma."
 
-def run_nexus_protocol(soru: str):
-    # 1. Masaya ilk veriyi SME fırlatır (Değişmez ham veri)
-    sme_veri = get_sme_res(soru)
-    
-    arastirma_cevap = ""
-    denetci_cevap = ""
-    
-    # 2. Yuvarlak Masa Kavgası (İterasyon Döngüsü)
-    for i in range(1, MAX_ITERATION + 1):
-        if i == 1:
-            # İlk kan: Araştırmacı sadece SME verisine bakar
-            arastirma_cevap = get_arastirmaci_res(soru, sme_veri)
-        else:
-            # İkinci raunt: Araştırmacı yediği tokatla (denetçi eleştirisiyle) veriyi düzeltmek zorunda
-            revize_soru = f"{soru}\nÖnceki hataların ve yediğin fırça: {denetci_cevap}\nŞimdi egonu ez ve veriyi düzelt!"
-            arastirma_cevap = get_arastirmaci_res(revize_soru, sme_veri)
-        
-        # Denetçi acımaz, her turda sunulan yeni veriyi tekrar paramparça eder
-        denetci_cevap = get_denetci_res(arastirma_cevap)
-
-    # 3. Moderatör (OpenRouter/Puter Hibrit) masaya yumruğunu vurur. Kavga biter, kesin hüküm çıkar.
-    moderator_hukmu = get_moderator_res(soru, sme_veri, arastirma_cevap, denetci_cevap)
-    
-    # 4. Başdanışman (Cohere) hükmü alır, sokağa/kullanıcıya kendi fikriymiş gibi satar.
-    final_sentez = get_basdanisman_res(moderator_hukmu)
-    
-    # 5. Lovable / Vercel (Frontend) tarafına fırlatılacak olan o jilet gibi JSON paketi
-    return {
-        "final_karar": final_sentez,
-        "sme": sme_veri,
-        "arastirma": arastirma_cevap,
-        "denetleme": denetci_cevap,
-        "moderator": moderator_hukmu
+    data = {
+        "model": "command-r-plus-08-2024",
+        "message": sarsici_mesaj,
+        "preamble": BASDANISMAN_PREAMBLE,
+        "temperature": 0.1 # Sıfır tolerans, sıfır halüsinasyon.
     }
+    
+    try:
+        r = requests.post(url, headers=headers, json=data, timeout=15)
+        r.raise_for_status()
+        return r.json().get("text", "Sentez başarısız.")
+    except Exception as e:
+        print(f"Başdanışman Hatası: {str(e)}")
+        return "Başdanışman şu an mühür basamıyor."
