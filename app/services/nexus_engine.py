@@ -1,73 +1,63 @@
 import json
 from app.agents.triage_agent import check_complexity
-from app.agents.sme_agents import get_sme_res
-from app.agents.groq_agents import get_arastirmaci_res, get_denetci_res
-from app.agents.moderator_agents import get_moderator_res, call_puter
-from app.agents.cohere_agents import get_basdanisman_res
-
-MAX_ITERATION = 2
+from app.agents.groq_agents import get_analizci_res, get_denetci_res
+from app.agents.moderator_agents import call_puter
+from app.agents.cohere_agents import get_yargic_res
 
 def run_nexus_protocol_stream(soru: str):
-    # Dışarıya canlı sinyal fırlatma formatımız (SSE)
     def emit(event_type, data):
         payload = json.dumps({"event": event_type, "data": data})
         return f"data: {payload}\n\n"
 
-    # 0. ADIM: Kapıdaki koruma
+    # 0. ADIM: Kapıdaki koruma (Triage)
     yield emit("status", "triage")
     triage = check_complexity(soru)
+    rota = triage.get("route", "COMPLEX") # Hata olursa en ağır rotadan devam
 
-    if not triage["is_complex"]:
-        yield emit("status", "basdanisman")
-        final_sentez = get_basdanisman_res(soru, triage["short_answer"])
-        
-        # Hızlı yol bitişi
+    # --- 1. VİTES: SHORT (Hızlı ve Alaycı Yol) ---
+    if rota == "SHORT":
+        yield emit("status", "yargic")
+        # Lovable arayüzü JSON beklediği için kısa cevabı formata uyduruyoruz
+        kisa_json = {
+            "karar": "BİLGİ",
+            "risk_skoru": "0",
+            "gerekce": "Basit Sohbet",
+            "racon": triage.get("answer", "Kısa cevap verilemedi.")
+        }
         yield emit("done", {
-            "final_karar": final_sentez,
-            "sme": "Gerek görülmedi.",
-            "arastirma": "Pas geçildi.",
-            "denetleme": "Gerek yok.",
-            "vizyoner_puter": "Uykuda.",
-            "moderator": triage["short_answer"]
+            "rota": "SHORT",
+            "analiz": "Pas geçildi.",
+            "denetim": "Pas geçildi.",
+            "vizyon": "Uykuda.",
+            "yargic": json.dumps(kisa_json) 
         })
         return
 
-    # 1. ADIM: SME
-    yield emit("status", "sme")
-    sme_veri = get_sme_res(soru)
+    # --- 2. VİTES: MEDIUM ve COMPLEX İÇİN ORTAK YOL ---
     
-    # 2. ADIM: Kaos Döngüsü
-    arastirma_cevap = ""
-    denetci_cevap = ""
-    for i in range(1, MAX_ITERATION + 1):
-        yield emit("status", "arastirmaci")
-        if i == 1:
-            arastirma_cevap = get_arastirmaci_res(soru, sme_veri)
-        else:
-            revize_soru = f"Denetçi fırçasıyla veriyi düzelt: {denetci_cevap}"
-            arastirma_cevap = get_arastirmaci_res(revize_soru, sme_veri)
-        
-        yield emit("status", "denetci")
-        denetci_cevap = get_denetci_res(arastirma_cevap)
+    # Adım 1: Analizci (Eski SME + Araştırmacı birleşimi)
+    yield emit("status", "analizci")
+    analizci_veri = get_analizci_res(soru)
 
-    # 3. ADIM: Puter
-    yield emit("status", "vizyoner_puter")
-    puter_vizyon = call_puter(soru, sme_veri, arastirma_cevap, denetci_cevap)
+    # Adım 2: Denetçi (Siyah Kuğu)
+    yield emit("status", "denetci")
+    denetci_veri = get_denetci_res(analizci_veri)
 
-    # 4. ADIM: Moderatör
-    yield emit("status", "moderator")
-    moderator_hukmu = get_moderator_res(soru, sme_veri, arastirma_cevap, denetci_cevap, puter_vizyon)
-    
-    # 5. ADIM: Başdanışman
-    yield emit("status", "basdanisman")
-    final_sentez = get_basdanisman_res(soru, moderator_hukmu)
-    
-    # Tüm kavga bitti, final paketi yolla
+    # --- 3. VİTES: SADECE COMPLEX ROTAYA ÖZEL ---
+    puter_vizyon = "Gerekli görülmedi (MEDIUM Rota)."
+    if rota == "COMPLEX":
+        yield emit("status", "vizyoner")
+        puter_vizyon = call_puter(soru, analizci_veri, denetci_veri)
+
+    # Adım 3: Yargıç (Tüm veriyi toplayıp JSON basan son otorite)
+    yield emit("status", "yargic")
+    yargic_karari = get_yargic_res(soru, analizci_veri, denetci_veri, puter_vizyon)
+
+    # Tüm akış bitti, final paketini yolla
     yield emit("done", {
-        "final_karar": final_sentez,
-        "sme": sme_veri,
-        "arastirma": arastirma_cevap,
-        "denetleme": denetci_cevap,
-        "vizyoner_puter": puter_vizyon,
-        "moderator": moderator_hukmu
+        "rota": rota,
+        "analiz": analizci_veri,
+        "denetim": denetci_veri,
+        "vizyon": puter_vizyon,
+        "yargic": yargic_karari
     })
