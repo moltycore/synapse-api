@@ -1,26 +1,31 @@
 from groq import Groq
 from app.core.config import GROQ_KEY
-from app.prompts.nexus_prompts import ARASTIRMACI_SYSTEM, DENETCI_SYSTEM
+from app.prompts.nexus_prompts import ANALIZCI_SYSTEM, DENETCI_SYSTEM
 
 client = Groq(api_key=GROQ_KEY)
 
-def get_arastirmaci_res(soru, sme_veri):
-    prompt = f"Konu: {soru}\nSME Verisi: {sme_veri}"
+def get_analizci_res(soru):
+    # SME ve Araştırmacı tek bedende birleşti. Sadece konuyu veriyoruz, kendisi deşiyor.
+    prompt = f"Analiz Edilecek Konu: {soru}"
+    
     res = client.chat.completions.create(
-        model="llama-3.3-70b-versatile", 
+        model="llama-3.3-70b-versatile", # Ağır top burada çalışıyor
         messages=[
-            {"role": "system", "content": ARASTIRMACI_SYSTEM}, 
+            {"role": "system", "content": ANALIZCI_SYSTEM}, 
             {"role": "user", "content": prompt}
         ]
     )
     return res.choices[0].message.content
 
-def get_denetci_res(arastirma_cevap):
+def get_denetci_res(analiz_cevap):
+    # Denetçi sadece Analizci'nin sunduğu veriyi parçalamaya odaklanır
+    prompt = f"Analizci'nin Çıktısı:\n{analiz_cevap}"
+    
     res = client.chat.completions.create(
-        model="llama-3.1-8b-instant", 
+        model="llama-3.1-8b-instant", # Acımasız risk avcısı için hızlı model
         messages=[
             {"role": "system", "content": DENETCI_SYSTEM}, 
-            {"role": "user", "content": arastirma_cevap}
+            {"role": "user", "content": prompt}
         ]
     )
     return res.choices[0].message.content
