@@ -7,6 +7,8 @@ from app.agents.cohere_agents import get_yargic_res
 def run_nexus_protocol_stream(soru: str):
     def emit(event_type, data):
         payload = json.dumps({"event": event_type, "data": data})
+        # LOGLARI GÖRMEK İÇİN BURAYI EKLEDİK:
+        print(f"DEBUG: Event={event_type} | Data={data}") 
         return f"data: {payload}\n\n"
 
     # 0. ADIM: Kapıdaki koruma (Triage)
