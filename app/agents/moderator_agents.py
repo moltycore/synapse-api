@@ -1,60 +1,29 @@
 import requests
-from openai import OpenAI
-from app.core.config import OPENROUTER_KEY, PUTER_APP_ID
-from app.prompts.nexus_prompts import MODERATOR_SYSTEM
+from app.core.config import PUTER_APP_ID
+from app.prompts.nexus_prompts import PUTER_SYSTEM
 
-def call_openrouter(soru, sme, arastirma, denetci, puter_vizyon):
-    # Ana Motor: OpenRouter (openrouter/free joker rotası)
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=OPENROUTER_KEY,
-    )
-    
-    # Prompt içerisine VİZYONER (Puter) verisi eklendi
-    prompt = f"SORU: {soru}\nSME: {sme}\nARAŞTIRMACI: {arastirma}\nDENETÇİ: {denetci}\nVİZYONER: {puter_vizyon}"
-    
-    response = client.chat.completions.create(
-        model="openrouter/free",
-        messages=[
-            {"role": "system", "content": MODERATOR_SYSTEM},
-            {"role": "user", "content": prompt}
-        ]
-    )
-    return response.choices[0].message.content
-
-def call_puter(soru, sme, arastirma, denetci, puter_vizyon):
-    # Yedek Lastik: Puter API
+def call_puter(soru, analizci_veri, denetci_veri):
     url = "https://api.puter.com/ai/chat" 
     headers = {
         "Authorization": f"Bearer {PUTER_APP_ID}",
         "Content-Type": "application/json"
     }
-    # Prompt içerisine VİZYONER (Puter) verisi eklendi
-    prompt = f"SORU: {soru}\nSME: {sme}\nARAŞTIRMACI: {arastirma}\nDENETÇİ: {denetci}\nVİZYONER: {puter_vizyon}"
+    
+    # Sadece soruyu, analizi ve riskleri verip vizyon istiyoruz
+    prompt = f"SORU: {soru}\nANALİZ: {analizci_veri}\nRİSKLER: {denetci_veri}"
     
     data = {
         "messages": [
-            {"role": "system", "content": MODERATOR_SYSTEM},
+            {"role": "system", "content": PUTER_SYSTEM},
             {"role": "user", "content": prompt}
         ],
         "model": "gpt-4o-mini"
     }
     
-    response = requests.post(url, headers=headers, json=data)
-    response.raise_for_status()
-    
-    return response.json().get("message", {}).get("content", "Puter yanıt veremedi.")
-
-def get_moderator_res(soru, sme, arastirma, denetci, puter_vizyon):
-    # Hibrit Geçiş (Fallback) Mantığı - Artık puter_vizyon parametresini de taşıyor
     try:
-        # Önce OpenRouter
-        return call_openrouter(soru, sme, arastirma, denetci, puter_vizyon)
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        response.raise_for_status()
+        return response.json().get("message", {}).get("content", "Vizyoner ufku göremedi.")
     except Exception as e:
-        print(f"OpenRouter Tıkandı: {e}. Puter yedek motoru ateşleniyor...")
-        
-        try:
-            # OpenRouter patlarsa sessizce Puter'ı devreye sok
-            return call_puter(soru, sme, arastirma, denetci, puter_vizyon)
-        except Exception as puter_e:
-            return f"Moderatör hata verdi: İki sistem de çöktü. OpenRouter: {e} | Puter: {puter_e}"
+        print(f"Puter Hatası: {str(e)}")
+        return "Vizyoner hatta düştü."
