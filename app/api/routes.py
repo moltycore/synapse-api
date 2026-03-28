@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from app.schemas.models import Soru
 
-# Bak burası kritik: Artık sonu "_stream" ile biten yeni motoru çağırıyoruz
 from app.services.nexus_engine import run_nexus_protocol_stream
 
 router = APIRouter()
@@ -13,9 +12,9 @@ async def analyze_endpoint(soru: Soru):
         raise HTTPException(status_code=400, detail="Soru boş aga, neyi analiz edeyim?")
 
     try:
-        # Canlı veri akışını (SSE) başlatıyoruz.
+        # Canlı veri akışını (SSE) başlatıyoruz. Yeni eklenen 'mode' bilgisini de motora veriyoruz.
         return StreamingResponse(
-            run_nexus_protocol_stream(soru.text), 
+            run_nexus_protocol_stream(soru.text, soru.mode), 
             media_type="text/event-stream"
         )
     except Exception as e:
