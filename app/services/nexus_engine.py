@@ -4,39 +4,44 @@ from app.agents.groq_agents import get_analizci_res, get_denetci_res
 from app.agents.moderator_agents import call_puter
 from app.agents.cohere_agents import get_yargic_res
 
-def run_nexus_protocol_stream(soru: str):
+def run_nexus_protocol_stream(soru: str, mode: str = "nexus"):
     def emit(event_type, data):
         payload = json.dumps({"event": event_type, "data": data})
         print(f"DEBUG: Event={event_type} | Data={data}")
         return f"data: {payload}\n\n"
 
-    # 0. TRIAGE
-    yield emit("status", "triage")
-    try:
-        triage = check_complexity(soru)
-        rota = triage.get("route", "COMPLEX")
-        answer = triage.get("answer", "")
-    except Exception as e:
-        print(f"ERROR Triage: {e}")
-        rota = "COMPLEX"
-        answer = ""
+    # ---------------------------------------------------------
+    # 1. TRIAGE MODU: Sadece kapıdaki memur çalışır, işi bitirir.
+    # ---------------------------------------------------------
+    if mode == "triage":
+        yield emit("status", "triage")
+        try:
+            triage = check_complexity(soru)
+            answer = triage.get("answer", "Triage bir cevap üretemedi.")
+        except Exception as e:
+            print(f"ERROR Triage: {e}")
+            answer = "Triage motoru çöktü."
 
-    # SHORT
-    if rota == "SHORT":
-        yield emit("status", "yargic")
         kisa_json = {
             "karar": "BİLGİ",
-            "risk_skoru": 0,  # düzeltildi: string değil int
-            "gerekce": "Basit Sohbet",
-            "racon": answer if answer else "Kısa cevap üretilemedi."
+            "risk_skoru": 0,
+            "gerekce": "Triage Modu",
+            "racon": answer
         }
         yield emit("done", {
-            "rota": "SHORT", "analiz": "Pas.", "denetim": "Pas.", "vizyon": "Pas.",
+            "rota": "SHORT", 
+            "analiz": "Triage modunda analizci pas geçildi.", 
+            "denetim": "Pas.", 
+            "vizyon": "Pas.",
             "yargic": json.dumps(kisa_json)
         })
         return
 
-    # MEDIUM / COMPLEX
+    # ---------------------------------------------------------
+    # 2. NEXUS MODU: Kapıdaki memuru bypass et, direkt masaya geç.
+    # ---------------------------------------------------------
+    rota = "COMPLEX" # Nexus modunda her şey ağır abilere gider.
+
     yield emit("status", "analizci")
     try:
         analizci_veri = get_analizci_res(soru)
@@ -51,14 +56,13 @@ def run_nexus_protocol_stream(soru: str):
         print(f"ERROR Denetci: {e}")
         denetci_veri = "Risk denetimi yapılamadı."
 
-    puter_vizyon = "Gerekli görülmedi (MEDIUM Rota)."
-    if rota == "COMPLEX":
-        yield emit("status", "vizyoner")
-        try:
-            puter_vizyon = call_puter(soru, analizci_veri, denetci_veri)
-        except Exception as e:
-            print(f"ERROR Vizyoner: {e}")
-            puter_vizyon = "Vizyoner şu an ufku göremiyor."
+    # Nexus modunda olduğumuz için Vizyoner direkt devreye girer.
+    yield emit("status", "vizyoner")
+    try:
+        puter_vizyon = call_puter(soru, analizci_veri, denetci_veri)
+    except Exception as e:
+        print(f"ERROR Vizyoner: {e}")
+        puter_vizyon = "Vizyoner şu an ufku göremiyor."
 
     yield emit("status", "yargic")
     try:
