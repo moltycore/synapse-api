@@ -1,7 +1,7 @@
 import requests
 import json
 from app.core.config import COHERE_KEY
-from app.prompts.nexus_prompts import YARGIC_SYSTEM
+from app.prompts.nexus_prompts import PRIME_SYSTEM
 
 def get_yargic_res(soru, core_final, ghost_bulgulari, void_elestirisi):
     url = "https://api.cohere.com/v1/chat"
@@ -10,7 +10,6 @@ def get_yargic_res(soru, core_final, ghost_bulgulari, void_elestirisi):
         "Content-Type": "application/json"
     }
     
-    # GHOST'un açıklarını ve CORE'un son halini PRIME'ın önüne koyuyoruz.
     dosya = (
         f"SORU: '{soru}'\n\n"
         f"CORE (RAFİNE EDİLMİŞ TASLAK): '{core_final}'\n\n"
@@ -22,8 +21,8 @@ def get_yargic_res(soru, core_final, ghost_bulgulari, void_elestirisi):
     data = {
         "model": "command-r-plus-08-2024",
         "message": dosya,
-        "preamble": YARGIC_SYSTEM,
-        "temperature": 0.2, # Biraz daha yaratıcı öneriler için tık yükselttik
+        "preamble": PRIME_SYSTEM,
+        "temperature": 0.2, 
         "response_format": {"type": "json_object"} 
     }
     
@@ -35,5 +34,5 @@ def get_yargic_res(soru, core_final, ghost_bulgulari, void_elestirisi):
         print(f"PRIME Hatası: {str(e)}")
         return json.dumps({
             "karar": "HATA", "risk_skoru": 100, "gerekce": "Sentez başarısız.",
-            "racon": "Mühür çatladı, sistem uykuda.", "vizyon_onerisi": "Tekrar deneyelim mi?"
+            "nihai_rapor": "Mühür çatladı, sistem uykuda.", "vizyon_onerisi": "Tekrar deneyelim mi?"
         })
