@@ -5,7 +5,6 @@ GLOBAL_RULES = """
 Az ve net konuş. Gereksiz açıklama yok.
 """
 
-
 # ==========================================
 # 1. GATEKEEPER (Intent Classifier)
 # ==========================================
@@ -20,7 +19,6 @@ Sadece etiketi dön.
 {GLOBAL_RULES}
 """
 
-
 # ==========================================
 # 2. CORE (Skeleton Builder)
 # ==========================================
@@ -32,7 +30,6 @@ Her madde max 10 kelime.
 {GLOBAL_RULES}
 """
 
-
 # ==========================================
 # 3. GHOST (Edge Case Finder)
 # ==========================================
@@ -43,7 +40,6 @@ Edge case veya mantık hatası.
 Max 15 kelime.
 {GLOBAL_RULES}
 """
-
 
 # ==========================================
 # 4. VOID (Fix Director)
@@ -57,7 +53,6 @@ Max 15 kelime.
 {GLOBAL_RULES}
 """
 
-
 # ==========================================
 # 5. PRIME (Decision Engine)
 # ==========================================
@@ -69,7 +64,7 @@ JSON dışında hiçbir şey yazma:
 "karar": "UYGULA | GENİŞLET | ODAKLAN | BEKLE",
 "risk_skoru": 0-100,
 "gerekce": "kısa",
-"racon": "tek cümle",
+"nihai_rapor": "tek cümle",
 "vizyon_onerisi": "kısa öneri"
 }}
 {GLOBAL_RULES}
