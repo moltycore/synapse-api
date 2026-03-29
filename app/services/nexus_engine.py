@@ -1,8 +1,8 @@
 import json
 from app.agents.solo_agent import process_solo
-from app.agents.groq_agents import get_analizci_res, get_denetci_res
-from app.agents.moderator_agents import call_puter
-from app.agents.cohere_agents import get_yargic_res
+from app.agents.moderator_agents import get_gatekeeper_res
+from app.agents.groq_agents import get_core_res, get_ghost_res, get_void_res
+from app.agents.cohere_agents import get_yargic_res # Prime rolü burada
 
 def run_nexus_protocol_stream(soru: str, mode: str = "nexus"):
     def emit(event_type, data):
@@ -11,7 +11,31 @@ def run_nexus_protocol_stream(soru: str, mode: str = "nexus"):
         return f"data: {payload}\n\n"
 
     # ---------------------------------------------------------
-    # 1. SOLO MODU: Sadece tekil uzman çalışır, işi bitirir.
+    # 1. GATEKEEPER: Niyet Okuyucu (Trafik Polisi)
+    # ---------------------------------------------------------
+    yield emit("status", "gatekeeper")
+    niyet = get_gatekeeper_res(soru)
+
+    # Niyet ONAY ise diğer ajanları hiç uyandırma, kısa kes.
+    if niyet == "ONAY":
+        kisa_json = {
+            "karar": "BEKLE",
+            "risk_skoru": 0,
+            "gerekce": "Kullanıcı onayı alındı.",
+            "racon": "Mevzu anlaşıldı, yeni komut bekleniyor.",
+            "vizyon_onerisi": "Konu kapandıysa yeni bir başlık açalım mı?"
+        }
+        yield emit("done", {
+            "rota": "SHORT",
+            "analiz": "Onay modu aktif.",
+            "denetim": "Pas.",
+            "vizyon": "Pas.",
+            "yargic": json.dumps(kisa_json)
+        })
+        return
+
+    # ---------------------------------------------------------
+    # 2. SOLO MODU: Niyet ONAY değilse ve mod SOLO ise
     # ---------------------------------------------------------
     if mode == "solo":
         yield emit("status", "solo")
@@ -19,14 +43,14 @@ def run_nexus_protocol_stream(soru: str, mode: str = "nexus"):
             solo_result = process_solo(soru)
             answer = solo_result.get("answer", "Solo bir cevap üretemedi.")
         except Exception as e:
-            print(f"ERROR Solo: {e}")
-            answer = "Solo motoru çöktü."
+            answer = f"Solo motoru çöktü: {str(e)}"
 
         kisa_json = {
             "karar": "BİLGİ",
             "risk_skoru": 0,
             "gerekce": "Solo Modu",
-            "racon": answer
+            "racon": answer,
+            "vizyon_onerisi": "Daha derin bir analiz için Nexus moduna geçebilirsin."
         }
         yield emit("done", {
             "rota": "SHORT", 
@@ -38,46 +62,43 @@ def run_nexus_protocol_stream(soru: str, mode: str = "nexus"):
         return
 
     # ---------------------------------------------------------
-    # 2. NEXUS MODU: Solo uzmanı bypass et, direkt masaya geç.
+    # 3. NEXUS MODU: AI Yargıtayı Döngüsü (CORE -> GHOST -> VOID -> CORE)
     # ---------------------------------------------------------
-    rota = "COMPLEX" # Nexus modunda her şey ağır abilere gider.
+    rota = "COMPLEX"
 
-    yield emit("status", "analizci")
-    try:
-        analizci_veri = get_analizci_res(soru)
-    except Exception as e:
-        print(f"ERROR Analizci: {e}")
-        analizci_veri = "Analiz motoru şu an uykuda."
+    # A. CORE: İlk İskelet
+    yield emit("status", "core")
+    core_ilk_taslak = get_core_res(soru)
 
-    yield emit("status", "denetci")
-    try:
-        denetci_veri = get_denetci_res(analizci_veri)
-    except Exception as e:
-        print(f"ERROR Denetci: {e}")
-        denetci_veri = "Risk denetimi yapılamadı."
+    # B. GHOST: Açık Bulma (Sızma)
+    yield emit("status", "ghost")
+    ghost_bulgulari = get_ghost_res(core_ilk_taslak)
 
-    # Nexus modunda olduğumuz için Vizyoner direkt devreye girer.
-    yield emit("status", "vizyoner")
-    try:
-        puter_vizyon = call_puter(soru, analizci_veri, denetci_veri)
-    except Exception as e:
-        print(f"ERROR Vizyoner: {e}")
-        puter_vizyon = "Vizyoner şu an ufku göremiyor."
+    # C. VOID: Eleştiri ve Revize Talebi
+    yield emit("status", "void")
+    void_elestirisi = get_void_res(core_ilk_taslak, ghost_bulgulari)
 
-    yield emit("status", "yargic")
+    # D. CORE (REFINE): Eleştiriye göre kendini düzeltme
+    yield emit("status", "core_refine")
+    core_final = get_core_res(soru, context=void_elestirisi)
+
+    # E. PRIME (YARGIÇ): Son Sentez ve Vizyon
+    yield emit("status", "prime")
     try:
-        yargic_karari = get_yargic_res(soru, analizci_veri, denetci_veri, puter_vizyon)
+        # Prime'a hem Ghost'un bulduklarını hem de Core'un son halini veriyoruz.
+        yargic_karari = get_yargic_res(soru, core_final, ghost_bulgulari, "Vizyon Prime'a entegre edildi.")
     except Exception as e:
-        print(f"ERROR Yargıç: {e}")
         yargic_karari = json.dumps({
             "karar": "HATA", "risk_skoru": -1, "gerekce": "Sistem hatası.",
-            "racon": "Mühür basılamadı, teknik arıza mevcut."
+            "racon": "Mühür basılamadı, teknik arıza mevcut.",
+            "vizyon_onerisi": "Sistemi resetleyip tekrar deneyelim."
         })
 
+    # F. ÇIKIŞ
     yield emit("done", {
         "rota": rota,
-        "analiz": analizci_veri,
-        "denetim": denetci_veri,
-        "vizyon": puter_vizyon,
+        "analiz": core_final, # Artık rafine edilmiş analiz gidiyor
+        "denetim": ghost_bulgulari, # Denetim kısmında Ghost'un saptamaları var
+        "vizyon": void_elestirisi, # Vizyon durağında eleştiriyi göstererek süreci şeffaflaştırıyoruz
         "yargic": yargic_karari
     })
