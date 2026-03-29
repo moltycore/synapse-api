@@ -11,7 +11,7 @@ def run_nexus_protocol_stream(soru: str, mode: str = "nexus"):
         return f"data: {payload}\n\n"
 
     # ---------------------------------------------------------
-    # 1. GATEKEEPER: Niyet Okuyucu (Trafik Polisi)
+    # 1. GATEKEEPER: Niyet Okuyucu
     # ---------------------------------------------------------
     yield emit("status", "gatekeeper")
     niyet = get_gatekeeper_res(soru)
@@ -62,7 +62,7 @@ def run_nexus_protocol_stream(soru: str, mode: str = "nexus"):
         return
 
     # ---------------------------------------------------------
-    # 3. NEXUS MODU: AI Yargıtayı Döngüsü (CORE -> GHOST -> VOID -> CORE)
+    # 3. NEXUS MODU: AI Döngüsü (CORE -> GHOST -> VOID -> CORE)
     # ---------------------------------------------------------
     rota = "COMPLEX"
 
