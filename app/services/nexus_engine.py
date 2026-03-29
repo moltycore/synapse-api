@@ -1,5 +1,5 @@
 import json
-from app.agents.triage_agent import check_complexity
+from app.agents.solo_agent import process_solo
 from app.agents.groq_agents import get_analizci_res, get_denetci_res
 from app.agents.moderator_agents import call_puter
 from app.agents.cohere_agents import get_yargic_res
@@ -11,26 +11,26 @@ def run_nexus_protocol_stream(soru: str, mode: str = "nexus"):
         return f"data: {payload}\n\n"
 
     # ---------------------------------------------------------
-    # 1. TRIAGE MODU: Sadece kapıdaki memur çalışır, işi bitirir.
+    # 1. SOLO MODU: Sadece tekil uzman çalışır, işi bitirir.
     # ---------------------------------------------------------
-    if mode == "triage":
-        yield emit("status", "triage")
+    if mode == "solo":
+        yield emit("status", "solo")
         try:
-            triage = check_complexity(soru)
-            answer = triage.get("answer", "Triage bir cevap üretemedi.")
+            solo_result = process_solo(soru)
+            answer = solo_result.get("answer", "Solo bir cevap üretemedi.")
         except Exception as e:
-            print(f"ERROR Triage: {e}")
-            answer = "Triage motoru çöktü."
+            print(f"ERROR Solo: {e}")
+            answer = "Solo motoru çöktü."
 
         kisa_json = {
             "karar": "BİLGİ",
             "risk_skoru": 0,
-            "gerekce": "Triage Modu",
+            "gerekce": "Solo Modu",
             "racon": answer
         }
         yield emit("done", {
             "rota": "SHORT", 
-            "analiz": "Triage modunda analizci pas geçildi.", 
+            "analiz": "Solo modunda analizci pas geçildi.", 
             "denetim": "Pas.", 
             "vizyon": "Pas.",
             "yargic": json.dumps(kisa_json)
@@ -38,7 +38,7 @@ def run_nexus_protocol_stream(soru: str, mode: str = "nexus"):
         return
 
     # ---------------------------------------------------------
-    # 2. NEXUS MODU: Kapıdaki memuru bypass et, direkt masaya geç.
+    # 2. NEXUS MODU: Solo uzmanı bypass et, direkt masaya geç.
     # ---------------------------------------------------------
     rota = "COMPLEX" # Nexus modunda her şey ağır abilere gider.
 
