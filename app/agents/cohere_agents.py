@@ -1,38 +1,32 @@
 import requests
-import json
 from app.core.config import COHERE_KEY
 from app.prompts.nexus_prompts import PRIME_SYSTEM
 
-def get_yargic_res(soru, core_final, ghost_bulgulari, void_elestirisi):
+def get_yargic_res(query: str, core_data: str, ghost_data: str, void_data: str) -> str:
     url = "https://api.cohere.com/v1/chat"
     headers = {
         "Authorization": f"Bearer {COHERE_KEY}",
         "Content-Type": "application/json"
     }
     
-    dosya = (
-        f"SORU: '{soru}'\n\n"
-        f"CORE (RAFİNE EDİLMİŞ TASLAK): '{core_final}'\n\n"
-        f"GHOST (KÖR NOKTA ANALİZİ): '{ghost_bulgulari}'\n\n"
-        f"VOID (ELEŞTİREL SÜZGEÇ): '{void_elestirisi}'\n\n"
-        "TALİMAT: Sadece ham JSON dön. 'vizyon_onerisi' kısmında kullanıcıyı şaşırtacak stratejik bir soru veya öneri ekle."
+    payload = (
+        f"QUERY: '{query}'\n\n"
+        f"CORE (REFINED): '{core_data}'\n\n"
+        f"GHOST (VULNERABILITIES): '{ghost_data}'\n\n"
+        f"VOID (DIRECTIVES): '{void_data}'\n\n"
     )
 
     data = {
         "model": "command-r-plus-08-2024",
-        "message": dosya,
+        "message": payload,
         "preamble": PRIME_SYSTEM,
-        "temperature": 0.2, 
-        "response_format": {"type": "json_object"} 
+        "temperature": 0.2
     }
     
     try:
-        r = requests.post(url, headers=headers, json=data, timeout=20)
+        r = requests.post(url, headers=headers, json=data, timeout=60)
         r.raise_for_status()
-        return r.json().get("text")
+        return r.json().get("text", "Prime did not return a response.")
     except Exception as e:
-        print(f"PRIME Hatası: {str(e)}")
-        return json.dumps({
-            "karar": "HATA", "risk_skoru": 100, "gerekce": "Sentez başarısız.",
-            "nihai_rapor": "Mühür çatladı, sistem uykuda.", "vizyon_onerisi": "Tekrar deneyelim mi?"
-        })
+        print(f"PRIME Critical Error: {str(e)}")
+        return "Sistem mühürleme hatası veya zaman aşımı oluştu. Teknik veriler korundu ancak nihai rapor üretilemedi."
