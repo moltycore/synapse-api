@@ -17,23 +17,10 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
         payload = json.dumps({"event": event_type, "data": data})
         return f"data: {payload}\n\n"
 
-    yield emit("status", "gatekeeper")
-    intent = get_gatekeeper_res(query)
-
-    if intent == "APPROVE":
-        yield emit("done", {
-            "route": "SHORT",
-            "core_data": "User approval detected.",
-            "ghost_data": "N/A",
-            "void_data": "N/A",
-            "prime_result": "Anlaşıldı, devam ediyoruz."
-        })
-        return
-
     if mode == "solo":
         yield emit("status", "solo")
         try:
-            solo_output = process_solo(query)
+            solo_output = process_solo(query, client=repair_client)
             result = solo_output.get("answer", "Solo module failed to generate response.")
         except Exception:
             result = "Solo engine critical failure."
@@ -47,22 +34,35 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
         })
         return
 
+    yield emit("status", "gatekeeper")
+    intent = get_gatekeeper_res(query, client=repair_client)
+
+    if intent == "APPROVE":
+        yield emit("done", {
+            "route": "SHORT",
+            "core_data": "User approval detected.",
+            "ghost_data": "N/A",
+            "void_data": "N/A",
+            "prime_result": "Anlaşıldı, devam ediyoruz."
+        })
+        return
+
     yield emit("status", "core")
     start = time.time()
     raw_core = get_core_res(query)
-    core_data, status = self_healing_wrapper(raw_core, repair_client or None)
+    core_data, status = self_healing_wrapper(raw_core, repair_client)
     logger.log_event("CORE", int((time.time() - start) * 1000), status, raw_core)
 
     yield emit("status", "ghost")
     start = time.time()
     raw_ghost = get_ghost_res(json.dumps(core_data))
-    ghost_data, status = self_healing_wrapper(raw_ghost, repair_client or None)
+    ghost_data, status = self_healing_wrapper(raw_ghost, repair_client)
     logger.log_event("GHOST", int((time.time() - start) * 1000), status, raw_ghost)
 
     yield emit("status", "void")
     start = time.time()
     raw_void = get_void_res(json.dumps(core_data), json.dumps(ghost_data))
-    void_data, status = self_healing_wrapper(raw_void, repair_client or None)
+    void_data, status = self_healing_wrapper(raw_void, repair_client)
     logger.log_event("VOID", int((time.time() - start) * 1000), status, raw_void)
 
     yield emit("status", "core_refine")
