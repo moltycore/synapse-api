@@ -4,9 +4,8 @@ from app.prompts.nexus_prompts import CORE_SYSTEM, GHOST_SYSTEM, VOID_SYSTEM
 
 client = Groq(api_key=GROQ_KEY)
 
-def get_core_res(soru, context=""):
-    # CORE (Mimar): Teknik iskeleti ve ana mantığı kurar.
-    prompt = f"Girdi: {soru}\nEk Bilgi/Revize Talebi: {context}"
+def get_core_res(query: str, context: str = "") -> str:
+    prompt = f"Input: {query}\nContext: {context}"
     
     res = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
@@ -14,35 +13,35 @@ def get_core_res(soru, context=""):
             {"role": "system", "content": CORE_SYSTEM}, 
             {"role": "user", "content": prompt}
         ],
-        max_tokens=300, # İskeletin derinliği için optimize edildi
+        max_tokens=300,
         temperature=0.3
     )
     return res.choices[0].message.content
 
-def get_ghost_res(core_cevap):
-    # GHOST (Sızıcı): Taslaktaki siber açıkları ve mantık hatalarını bulur.
-    prompt = f"CORE Taslağı:\n{core_cevap}"
+def get_ghost_res(core_response: str) -> str:
+    prompt = f"CORE Draft:\n{core_response}"
+    
     res = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
             {"role": "system", "content": GHOST_SYSTEM}, 
             {"role": "user", "content": prompt}
         ],
-        max_tokens=150, # Hızlı ve vurucu analiz için kısıtlandı
+        max_tokens=150,
         temperature=0.4
     )
     return res.choices[0].message.content
 
-def get_void_res(core_cevap, ghost_cevap):
-    # VOID (Protokol): GHOST verilerini direktiflere dönüştürür.
-    prompt = f"CORE Taslağı: {core_cevap}\nGHOST Bulguları: {ghost_cevap}"
+def get_void_res(core_response: str, ghost_response: str) -> str:
+    prompt = f"CORE Draft: {core_response}\nGHOST Findings: {ghost_response}"
+    
     res = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
             {"role": "system", "content": VOID_SYSTEM}, 
             {"role": "user", "content": prompt}
         ],
-        max_tokens=150, # Net komut seti için sınırlandırıldı
+        max_tokens=150,
         temperature=0.3
     )
     return res.choices[0].message.content
