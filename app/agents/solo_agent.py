@@ -1,39 +1,27 @@
 import os
 from groq import Groq
 from app.core.config import GROQ_KEY
-from app.prompts.solo_prompts import SOLO_SYSTEM
 
-# Default client as fallback
-default_client = Groq(api_key=GROQ_KEY)
-
-def process_solo(query: str, client=None, model="llama-3.3-70b-versatile"):
-    # Use repair_client from engine if provided, else fallback to default
-    active_client = client if client else default_client
+def run_senior_agent(query: str, system_prompt: str, client=None):
+    # Initialize client if not provided
+    active_client = client or Groq(api_key=GROQ_KEY)
     
     try:
-        response = active_client.chat.completions.create(
-            model=model,
+        completion = active_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": SOLO_SYSTEM},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": query}
             ],
-            max_tokens=250,
-            temperature=0.4 
+            temperature=0.8,
+            max_tokens=500,
+            top_p=0.9,
+            frequency_penalty=0.7,
+            presence_penalty=0.6
         )
 
-        answer = response.choices[0].message.content.strip()
-        
-        if not answer:
-            return {"route": "SHORT", "answer": "Model sustu, promptu kontrol et."}
-
-        return {
-            "route": "SHORT", 
-            "answer": answer
-        }
+        result = completion.choices[0].message.content
+        return result.strip() if result else "Error: Null response from model"
 
     except Exception as e:
-        print(f"Solo Agent Detail Error: {e}")
-        return {
-            "route": "SHORT", 
-            "answer": f"Solo engine failure: {str(e)}"
-        }
+        return f"Agent execution failure: {str(e)}"
