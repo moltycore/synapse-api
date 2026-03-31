@@ -1,35 +1,39 @@
-import groq
+import os
+from groq import Groq
 from app.core.config import GROQ_KEY
 from app.prompts.solo_prompts import SOLO_SYSTEM
 
-client = groq.Client(api_key=GROQ_KEY)
+# Default client as fallback
+default_client = Groq(api_key=GROQ_KEY)
 
-def process_solo(soru):
-    """
-    Solo modu seçildiyse doğrudan kıdemli uzman cevabını üretir.
-    'route': 'SHORT' dönmeye devam ediyoruz ki mevcut API/Frontend akışı patlamasın.
-    """
+def process_solo(query: str, client=None, model="llama-3.3-70b-versatile"):
+    # Use repair_client from engine if provided, else fallback to default
+    active_client = client if client else default_client
+    
     try:
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+        response = active_client.chat.completions.create(
+            model=model,
             messages=[
                 {"role": "system", "content": SOLO_SYSTEM},
-                {"role": "user", "content": soru}
+                {"role": "user", "content": query}
             ],
-            max_tokens=150, # Uzman cevabı için ideal alan
+            max_tokens=250,
             temperature=0.4 
         )
 
         answer = response.choices[0].message.content.strip()
         
+        if not answer:
+            return {"route": "SHORT", "answer": "Model sustu, promptu kontrol et."}
+
         return {
             "route": "SHORT", 
             "answer": answer
         }
 
     except Exception as e:
-        print(f"Solo Hatası: {e}")
+        print(f"Solo Agent Detail Error: {e}")
         return {
             "route": "SHORT", 
-            "answer": "Şu an cevap veremiyorum, sistemde bir pürüz var."
+            "answer": f"Solo engine failure: {str(e)}"
         }
