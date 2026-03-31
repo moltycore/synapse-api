@@ -24,7 +24,7 @@ def get_yargic_res(query: str, core_data: str, ghost_data: str, void_data: str) 
     }
     
     try:
-        r = requests.post(url, headers=headers, json=data, timeout=60)
+        r = requests.post(url, headers=headers, json=data, timeout=40)
         r.raise_for_status()
         return r.json().get("text", "Prime did not return a response.")
     except Exception as e:
