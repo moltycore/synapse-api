@@ -8,26 +8,22 @@ from app.agents.solo_agent import process_solo
 router = APIRouter()
 
 @router.post("/analyze")
-async def analyze_endpoint(soru: Soru):
-    # Boş soru kontrolü
-    if not soru.text or not soru.text.strip():
-        raise HTTPException(status_code=400, detail="Soru boş aga, neyi analiz edeyim?")
+async def analyze_endpoint(request: Soru):
+    # Validation
+    if not request.text or not request.text.strip():
+        raise HTTPException(status_code=400, detail="Null input detected.")
 
     try:
-        # SOLO MODU: Eski Triage'ın tüm izleri silindi.
-        if soru.mode == "solo":
-            result = process_solo(soru.text)
+        # Solo Mode Execution
+        if request.mode == "solo":
+            result = process_solo(request.text)
             
             async def generate_solo_response():
-                # Frontend (Index.tsx) SSE akışı beklediği için yapıyı koruyoruz.
+                # Enforce response schema for Index.tsx compatibility
                 payload = {
                     "event": "done",
                     "data": {
-                        "analiz": result.get("answer"),
-                        "racon": result.get("answer"), 
-                        "denetim": "Pas geçildi.",
-                        "vizyon": "Pas geçildi.",
-                        "yargic": None
+                        "prime_result": result.get("answer")
                     }
                 }
                 yield f"data: {json.dumps(payload)}\n\n"
@@ -37,12 +33,12 @@ async def analyze_endpoint(soru: Soru):
                 media_type="text/event-stream"
             )
 
-        # NEXUS MODU: Çoklu ajan simülasyonu ve canlı akış.
+        # Nexus Mode: Multi-agent stream
         return StreamingResponse(
-            run_nexus_protocol_stream(soru.text, soru.mode), 
+            run_nexus_protocol_stream(request.text, request.mode), 
             media_type="text/event-stream"
         )
         
     except Exception as e:
-        # Hata yönetimi
-        raise HTTPException(status_code=500, detail=f"Motor patladı: {str(e)}")
+        # Internal error logging
+        raise HTTPException(status_code=500, detail=f"Runtime Error: {str(e)}")
