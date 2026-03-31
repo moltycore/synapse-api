@@ -1,90 +1,83 @@
 import json
+import time
+import os
+from groq import Groq
 from app.agents.solo_agent import process_solo
 from app.agents.moderator_agents import get_gatekeeper_res
 from app.agents.groq_agents import get_core_res, get_ghost_res, get_void_res
-from app.agents.cohere_agents import get_yargic_res 
+from app.agents.cohere_agents import get_yargic_res
+from app.utils.blackbox_logger import BlackboxLogger, self_healing_wrapper
 
-def run_nexus_protocol_stream(soru: str, mode: str = "nexus"):
+REPAIR_KEY = os.getenv("REPAIR_GROQ_API_KEY")
+repair_client = Groq(api_key=REPAIR_KEY) if REPAIR_KEY else None
+logger = BlackboxLogger()
+
+def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
     def emit(event_type, data):
         payload = json.dumps({"event": event_type, "data": data})
-        print(f"DEBUG: Event={event_type} | Data={data}")
         return f"data: {payload}\n\n"
 
-    # 1. GATEKEEPER
     yield emit("status", "gatekeeper")
-    niyet = get_gatekeeper_res(soru)
+    intent = get_gatekeeper_res(query)
 
-    if niyet == "ONAY":
-        kisa_json = {
-            "karar": "BEKLE",
-            "risk_skoru": 0,
-            "gerekce": "Kullanıcı onayı alındı.",
-            "nihai_rapor": "Mevzu anlaşıldı, yeni komut bekleniyor.",
-            "vizyon_onerisi": "Konu kapandıysa yeni bir başlık açalım mı?"
-        }
+    if intent == "APPROVE":
         yield emit("done", {
-            "rota": "SHORT",
-            "analiz": "Onay modu aktif.",
-            "denetim": "Pas.",
-            "vizyon": "Pas.",
-            "yargic": json.dumps(kisa_json)
+            "route": "SHORT",
+            "core_data": "User approval detected.",
+            "ghost_data": "N/A",
+            "void_data": "N/A",
+            "prime_result": "Anlaşıldı, devam ediyoruz."
         })
         return
 
-    # 2. SOLO MODU
     if mode == "solo":
         yield emit("status", "solo")
         try:
-            solo_result = process_solo(soru)
-            answer = solo_result.get("answer", "Solo bir cevap üretemedi.")
-        except Exception as e:
-            answer = f"Solo motoru çöktü: {str(e)}"
+            solo_output = process_solo(query)
+            result = solo_output.get("answer", "Solo module failed to generate response.")
+        except Exception:
+            result = "Solo engine critical failure."
 
-        kisa_json = {
-            "karar": "BİLGİ",
-            "risk_skoru": 0,
-            "gerekce": "Solo Modu",
-            "nihai_rapor": answer,
-            "vizyon_onerisi": "Daha derin bir analiz için Nexus moduna geçebilirsin."
-        }
         yield emit("done", {
-            "rota": "SHORT", 
-            "analiz": "Solo modunda analizci pas geçildi.", 
-            "denetim": "Pas.", 
-            "vizyon": "Pas.",
-            "yargic": json.dumps(kisa_json)
+            "route": "SHORT", 
+            "core_data": "Solo analysis active.", 
+            "ghost_data": "N/A", 
+            "void_data": "N/A",
+            "prime_result": result
         })
         return
 
-    # 3. NEXUS MODU
-    rota = "COMPLEX"
-
     yield emit("status", "core")
-    core_ilk_taslak = get_core_res(soru)
+    start = time.time()
+    raw_core = get_core_res(query)
+    core_data, status = self_healing_wrapper(raw_core, repair_client or None)
+    logger.log_event("CORE", int((time.time() - start) * 1000), status, raw_core)
 
     yield emit("status", "ghost")
-    ghost_bulgulari = get_ghost_res(core_ilk_taslak)
+    start = time.time()
+    raw_ghost = get_ghost_res(json.dumps(core_data))
+    ghost_data, status = self_healing_wrapper(raw_ghost, repair_client or None)
+    logger.log_event("GHOST", int((time.time() - start) * 1000), status, raw_ghost)
 
     yield emit("status", "void")
-    void_elestirisi = get_void_res(core_ilk_taslak, ghost_bulgulari)
+    start = time.time()
+    raw_void = get_void_res(json.dumps(core_data), json.dumps(ghost_data))
+    void_data, status = self_healing_wrapper(raw_void, repair_client or None)
+    logger.log_event("VOID", int((time.time() - start) * 1000), status, raw_void)
 
     yield emit("status", "core_refine")
-    core_final = get_core_res(soru, context=void_elestirisi)
+    final_core = get_core_res(query, context=json.dumps(void_data))
 
     yield emit("status", "prime")
     try:
-        yargic_karari = get_yargic_res(soru, core_final, ghost_bulgulari, "Vizyon Prime'a entegre edildi.")
-    except Exception as e:
-        yargic_karari = json.dumps({
-            "karar": "HATA", "risk_skoru": -1, "gerekce": "Sistem hatası.",
-            "nihai_rapor": "Mühür basılamadı, teknik arıza mevcut.",
-            "vizyon_onerisi": "Sistemi resetleyip tekrar deneyelim."
-        })
+        prime_result = get_yargic_res(query, final_core, json.dumps(ghost_data), "Integrated Vision.")
+    except Exception:
+        prime_result = "Sistem mühürleme hatası oluştu, teknik veriler korundu ancak nihai rapor üretilemedi."
 
     yield emit("done", {
-        "rota": rota,
-        "analiz": core_final, 
-        "denetim": ghost_bulgulari, 
-        "vizyon": void_elestirisi, 
-        "yargic": yargic_karari
+        "route": "COMPLEX",
+        "core_data": json.dumps(core_data), 
+        "ghost_data": json.dumps(ghost_data), 
+        "void_data": json.dumps(void_data), 
+        "prime_result": prime_result
     })
