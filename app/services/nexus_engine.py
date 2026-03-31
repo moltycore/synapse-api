@@ -25,6 +25,7 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
         except Exception:
             result = "Solo engine critical failure."
 
+        # Consistent data contract with Frontend
         yield emit("done", {
             "route": "SHORT", 
             "core_data": "Solo analysis active.", 
@@ -34,6 +35,7 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
         })
         return
 
+    # Nexus Logic... (Geri kalan kısım aynı)
     yield emit("status", "gatekeeper")
     intent = get_gatekeeper_res(query, client=repair_client)
 
@@ -72,7 +74,7 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
     try:
         prime_result = get_yargic_res(query, final_core, json.dumps(ghost_data), "Integrated Vision.")
     except Exception:
-        prime_result = "Sistem mühürleme hatası oluştu, teknik veriler korundu ancak nihai rapor üretilemedi."
+        prime_result = "Sistem mühürleme hatası oluştu."
 
     yield emit("done", {
         "route": "COMPLEX",
