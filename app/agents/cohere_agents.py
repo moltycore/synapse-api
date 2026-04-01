@@ -2,7 +2,7 @@ import requests
 from app.core.config import COHERE_KEY
 from app.prompts.nexus_prompts import PRIME_SYSTEM
 
-def get_yargic_res(query: str, core_data: str, ghost_data: str, void_data: str) -> str:
+def get_prime_res(query: str, core_data: str, ghost_data: str, void_data: str) -> str:
     url = "https://api.cohere.com/v1/chat"
     headers = {
         "Authorization": f"Bearer {COHERE_KEY}",
