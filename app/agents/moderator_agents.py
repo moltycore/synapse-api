@@ -11,8 +11,11 @@ def get_gatekeeper_res(query: str, client=None, model="llama-3.1-8b-instant") ->
                 {"role": "system", "content": GATEKEEPER_SYSTEM},
                 {"role": "user", "content": query}
             ],
-            max_tokens=10,
-            temperature=0.0
+            temperature=0.0,
+            top_p=1.0,
+            max_tokens=20,
+            frequency_penalty=0.0,
+            presence_penalty=0.0
         )
         intent = response.choices[0].message.content.strip().upper()
         
