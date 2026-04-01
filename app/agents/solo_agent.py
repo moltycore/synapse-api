@@ -2,6 +2,9 @@ import os
 from groq import Groq
 from app.core.config import GROQ_KEY
 from app.prompts.solo_prompts import SOLO_SYSTEM
+from app.utils.blackbox_logger import BlackboxLogger # Puter Sync Engine
+
+logger = BlackboxLogger()
 
 def process_solo(query: str, client=None):
     active_client = client or Groq(api_key=GROQ_KEY)
@@ -21,11 +24,17 @@ def process_solo(query: str, client=None):
         )
 
         answer = completion.choices[0].message.content
-        
         if not answer:
-            return {"route": "SHORT", "answer": "Error: Null response from model"}
+            return {"route": "SHORT", "answer": "Error: Null response"}
 
-        return {"route": "SHORT", "answer": answer.strip()}
+        payload = {"route": "SHORT", "answer": answer.strip(), "query": query}
+        
+        # PUTER SYNC: Save solo interaction to Dashboard
+        logger.sync_to_puter(payload, folder="Chats")
+        
+        return payload
 
     except Exception as e:
-        return {"route": "SHORT", "answer": f"Agent execution failure: {str(e)}"}
+        err_msg = f"Agent execution failure: {str(e)}"
+        logger.log_event("SOLO_AGENT", 0, "CRITICAL_ERROR", err_msg)
+        return {"route": "SHORT", "answer": err_msg}
