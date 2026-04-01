@@ -89,11 +89,17 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
     except Exception:
         prime_result = "Prime synthesis critical failure."
 
-    # Final Payload Emission
-    yield emit("done", {
+    # Final Payload Construction
+    final_payload = {
         "route": "COMPLEX",
         "core_data": json.dumps(core_data), 
         "ghost_data": json.dumps(ghost_data), 
         "void_data": json.dumps(void_data), 
         "prime_result": prime_result
-    })
+    }
+
+    # PERSISTENCE: Puter FS Synchronization
+    logger.sync_to_puter(final_payload, folder="Chats")
+
+    # Final Payload Emission
+    yield emit("done", final_payload)
