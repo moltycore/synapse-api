@@ -13,8 +13,11 @@ def get_core_res(query: str, context: str = "") -> str:
             {"role": "system", "content": CORE_SYSTEM}, 
             {"role": "user", "content": prompt}
         ],
+        temperature=0.3,
+        top_p=0.9,
         max_tokens=300,
-        temperature=0.3
+        frequency_penalty=0.2,
+        presence_penalty=0.1
     )
     return res.choices[0].message.content
 
@@ -27,8 +30,11 @@ def get_ghost_res(core_response: str) -> str:
             {"role": "system", "content": GHOST_SYSTEM}, 
             {"role": "user", "content": prompt}
         ],
-        max_tokens=150,
-        temperature=0.4
+        temperature=0.6,
+        top_p=0.95,
+        max_tokens=200,
+        frequency_penalty=0.3,
+        presence_penalty=0.4
     )
     return res.choices[0].message.content
 
@@ -41,7 +47,10 @@ def get_void_res(core_response: str, ghost_response: str) -> str:
             {"role": "system", "content": VOID_SYSTEM}, 
             {"role": "user", "content": prompt}
         ],
-        max_tokens=150,
-        temperature=0.3
+        temperature=0.2,
+        top_p=0.9,
+        max_tokens=200,
+        frequency_penalty=0.2,
+        presence_penalty=0.0
     )
     return res.choices[0].message.content
