@@ -20,7 +20,11 @@ def get_yargic_res(query: str, core_data: str, ghost_data: str, void_data: str) 
         "model": "command-r-plus-08-2024",
         "message": payload,
         "preamble": PRIME_SYSTEM,
-        "temperature": 0.2
+        "temperature": 0.5,
+        "p": 0.9,
+        "max_tokens": 250,
+        "frequency_penalty": 0.4,
+        "presence_penalty": 0.3
     }
     
     try:
@@ -29,4 +33,5 @@ def get_yargic_res(query: str, core_data: str, ghost_data: str, void_data: str) 
         return r.json().get("text", "Prime did not return a response.")
     except Exception as e:
         print(f"PRIME Critical Error: {str(e)}")
-        return "Sistem mühürleme hatası veya zaman aşımı oluştu. Teknik veriler korundu ancak nihai rapor üretilemedi."
+        return "Sistem hatası veya zaman aşımı oluştu."
+        
