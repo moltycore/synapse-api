@@ -1,15 +1,14 @@
 import json
 import time
-import os
 from groq import Groq
+from app.core.config import GROQ_KEY
 from app.agents.solo_agent import process_solo
 from app.agents.moderator_agents import get_gatekeeper_res
 from app.agents.groq_agents import get_core_res, get_ghost_res, get_void_res
-from app.agents.cohere_agents import get_prime_res # Updated: Professional terminology
+from app.agents.cohere_agents import get_prime_res 
 from app.utils.blackbox_logger import BlackboxLogger, self_healing_wrapper
 
-REPAIR_KEY = os.getenv("REPAIR_GROQ_API_KEY")
-repair_client = Groq(api_key=REPAIR_KEY) if REPAIR_KEY else None
+shared_client = Groq(api_key=GROQ_KEY)
 logger = BlackboxLogger()
 
 def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
@@ -21,7 +20,7 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
     if mode == "solo":
         yield emit("status", "solo")
         try:
-            solo_output = process_solo(query, client=repair_client)
+            solo_output = process_solo(query, client=shared_client)
             result = solo_output.get("answer", "Solo engine failure.")
         except Exception:
             result = "Solo engine critical failure."
@@ -36,10 +35,8 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
         return
 
     # --- NEXUS PROTOCOL EXECUTION ---
-    
-    # 1. Intent Classification (Gatekeeper)
     yield emit("status", "gatekeeper")
-    intent = get_gatekeeper_res(query, client=repair_client)
+    intent = get_gatekeeper_res(query, client=shared_client)
 
     if intent == "APPROVE":
         yield emit("done", {
@@ -51,35 +48,29 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
         })
         return
 
-    # 2. Skeleton Extraction (Core)
     yield emit("status", "core")
     start = time.time()
     raw_core = get_core_res(query)
-    core_data, status = self_healing_wrapper(raw_core, repair_client)
+    core_data, status = self_healing_wrapper(raw_core, shared_client)
     logger.log_event("CORE", int((time.time() - start) * 1000), status, raw_core)
 
-    # 3. Vulnerability Audit (Ghost)
     yield emit("status", "ghost")
     start = time.time()
     raw_ghost = get_ghost_res(json.dumps(core_data))
-    ghost_data, status = self_healing_wrapper(raw_ghost, repair_client)
+    ghost_data, status = self_healing_wrapper(raw_ghost, shared_client)
     logger.log_event("GHOST", int((time.time() - start) * 1000), status, raw_ghost)
 
-    # 4. Directive Generation (Void)
     yield emit("status", "void")
     start = time.time()
     raw_void = get_void_res(json.dumps(core_data), json.dumps(ghost_data))
-    void_data, status = self_healing_wrapper(raw_void, repair_client)
+    void_data, status = self_healing_wrapper(raw_void, shared_client)
     logger.log_event("VOID", int((time.time() - start) * 1000), status, raw_void)
 
-    # 5. Core Refinement
     yield emit("status", "core_refine")
     final_core = get_core_res(query, context=json.dumps(void_data))
 
-    # 6. Final Authority (Prime)
     yield emit("status", "prime")
     try:
-        # Pass full technical payload for synthesis
         prime_result = get_prime_res(
             query, 
             final_core, 
@@ -89,7 +80,6 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
     except Exception:
         prime_result = "Prime synthesis critical failure."
 
-    # Final Payload Construction
     final_payload = {
         "route": "COMPLEX",
         "core_data": json.dumps(core_data), 
@@ -98,8 +88,6 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
         "prime_result": prime_result
     }
 
-    # PERSISTENCE: Puter FS Synchronization
-    logger.sync_to_puter(final_payload, folder="Chats")
-
-    # Final Payload Emission
+    # FIREBASE SYNC
+    logger.sync_to_firebase(final_payload, folder="chats")
     yield emit("done", final_payload)
