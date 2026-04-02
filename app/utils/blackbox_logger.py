@@ -1,5 +1,5 @@
 import json
-import os
+import threading
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -12,16 +12,24 @@ class BlackboxLogger:
                 cred = credentials.Certificate(FIREBASE_CREDENTIALS)
                 firebase_admin.initialize_app(cred)
             else:
-                raise ValueError("FIREBASE_CREDENTIALS missing in environment")
-        self.db = firestore.client()
+                print("WARNING: FIREBASE_CREDENTIALS missing in environment.")
+        
+        self.db = firestore.client() if firebase_admin._apps else None
 
-    def _send(self, collection: str, payload: dict):
+    def _background_write(self, collection: str, payload: dict):
+        if not self.db:
+            return
         try:
             payload["timestamp"] = datetime.now().isoformat()
             self.db.collection("synapse_archive").document(collection).collection("payloads").add(payload)
-            return True
-        except Exception:
-            return False
+        except Exception as e:
+            print(f"FIREBASE_SYNC_ERROR: {e}")
+
+    def _send(self, collection: str, payload: dict):
+        # Asenkron "Fırlat ve Unut" Mantığı
+        thread = threading.Thread(target=self._background_write, args=(collection, payload))
+        thread.start()
+        return True
 
     def log_event(self, agent_name: str, latency_ms: int, status: str, raw_data: str):
         payload = {
