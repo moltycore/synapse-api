@@ -1,5 +1,6 @@
 import json
 import threading
+import pytz
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -20,13 +21,13 @@ class BlackboxLogger:
         if not self.db:
             return
         try:
-            payload["timestamp"] = datetime.now().isoformat()
+            tz = pytz.timezone('Europe/Istanbul')
+            payload["timestamp"] = datetime.now(tz).isoformat()
             self.db.collection("synapse_archive").document(collection).collection("payloads").add(payload)
         except Exception as e:
             print(f"FIREBASE_SYNC_ERROR: {e}")
 
     def _send(self, collection: str, payload: dict):
-        # Asenkron "Fırlat ve Unut" Mantığı
         thread = threading.Thread(target=self._background_write, args=(collection, payload))
         thread.start()
         return True
