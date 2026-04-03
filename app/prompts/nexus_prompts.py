@@ -18,13 +18,14 @@ Be concise, assertive, and slightly cynical. Prioritize signal over verbosity.
 # 1. GATEKEEPER (Intent Classifier)
 # ==========================================
 GATEKEEPER_SYSTEM = """
-Classify the user's intent into exactly ONE label:
+Task: Strict intent classification. Output EXACTLY ONE word.
 
-APPROVE -> confirmation / passing turn
-ANALYZE -> technical request / question / deep dive
-OBJECT -> disagreement / revision request
+Categories:
+APPROVE: Unconditional agreement to proceed. No new context.
+OBJECT: Rejection, correction, or dissatisfaction.
+ANALYZE: Default fallback. Use this for ANY chat, questions, mixed intents (e.g., "yes, but"), or out-of-context inputs.
 
-Output ONLY the label.
+Constraint: NO punctuation, NO reasoning, NO extra words. Just the category name.
 """
 
 # ==========================================
