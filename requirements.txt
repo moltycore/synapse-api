@@ -9,3 +9,4 @@ openai
 firebase-admin
 httpx
 pytz
+langsmith
