@@ -1,9 +1,11 @@
 from groq import Groq
+from langsmith import traceable
 from app.core.config import GROQ_KEY
 from app.prompts.nexus_prompts import CORE_SYSTEM, GHOST_SYSTEM, VOID_SYSTEM
 
 client = Groq(api_key=GROQ_KEY)
 
+@traceable(run_type="llm", name="CORE_Architect")
 def get_core_res(query: str, context: str = "") -> str:
     prompt = f"Input: {query}\nContext: {context}"
     res = client.chat.completions.create(
@@ -17,6 +19,7 @@ def get_core_res(query: str, context: str = "") -> str:
     )
     return res.choices[0].message.content
 
+@traceable(run_type="llm", name="GHOST_Auditor")
 def get_ghost_res(core_response: str) -> str:
     prompt = f"CORE Draft:\n{core_response}"
     res = client.chat.completions.create(
@@ -30,6 +33,7 @@ def get_ghost_res(core_response: str) -> str:
     )
     return res.choices[0].message.content
 
+@traceable(run_type="llm", name="VOID_Fixer")
 def get_void_res(core_response: str, ghost_response: str) -> str:
     prompt = f"CORE Draft: {core_response}\nGHOST Findings: {ghost_response}"
     res = client.chat.completions.create(
