@@ -63,8 +63,18 @@ Act as a hostile auditor.
 
 SCHEMA:
 {{
-  "vulnerability_1": {{"type": "...", "detail": "..."}},
-  "vulnerability_2": {{"type": "...", "detail": "..."}}
+  "vulnerabilities": [
+    {{
+      "id": "vuln_1",
+      "type": "...",
+      "detail": "..."
+    }},
+    {{
+      "id": "vuln_2",
+      "type": "...",
+      "detail": "..."
+    }}
+  ]
 }}
 
 {GLOBAL_MINDSET}
