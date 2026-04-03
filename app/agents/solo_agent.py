@@ -1,4 +1,5 @@
 from groq import Groq
+from langsmith import traceable
 from app.core.config import GROQ_KEY
 from app.prompts.solo_prompts import SOLO_SYSTEM
 from app.utils.blackbox_logger import BlackboxLogger 
@@ -6,6 +7,7 @@ from app.utils.blackbox_logger import BlackboxLogger
 logger = BlackboxLogger()
 default_client = Groq(api_key=GROQ_KEY)
 
+@traceable(run_type="chain", name="SOLO_Engine")
 def process_solo(query: str, client=None):
     active_client = client or default_client
     try:
