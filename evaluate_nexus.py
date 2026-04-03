@@ -23,17 +23,15 @@ def process_eval_target(inputs: dict) -> dict:
 
     return {"prime_result": final_payload.get("prime_result", "FAIL")}
 
-
-if __name__ == "__main__":
+# DİKKAT: Burası değişti. Artık API'den tetiklenecek bir fonksiyon.
+def fire_eval_sequence():
     client = Client()
     target_dataset = "Nexus-Stress-Test"
-
     print(f"SYSTEM: Initiating evaluation sequence for [{target_dataset}]...")
-
+    
     evaluate(
         process_eval_target,
         data=target_dataset,
         experiment_prefix="NEXUS_CORE_V1"
     )
-
     print("SYSTEM: Evaluation terminated. Matrix updated in LangSmith.")
