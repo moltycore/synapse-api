@@ -1,9 +1,7 @@
 import requests
-from langsmith import traceable
 from app.core.config import COHERE_KEY
 from app.prompts.nexus_prompts import PRIME_SYSTEM
 
-@traceable(run_type="llm", name="PRIME_Synthesizer")
 def get_prime_res(query: str, core_data: str, ghost_data: str, void_data: str) -> str:
     url = "https://api.cohere.com/v1/chat"
     headers = {
