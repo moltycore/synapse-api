@@ -1,7 +1,9 @@
+
+
+
 import json
 import time
 from groq import Groq
-from langsmith import traceable
 from app.core.config import GROQ_KEY
 from app.agents.solo_agent import process_solo
 from app.agents.moderator_agents import get_gatekeeper_res
@@ -12,7 +14,6 @@ from app.utils.blackbox_logger import BlackboxLogger, self_healing_wrapper
 shared_client = Groq(api_key=GROQ_KEY)
 logger = BlackboxLogger()
 
-@traceable(run_type="chain", name="Nexus_Orchestrator")
 def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
     def emit(event_type, data):
         payload = json.dumps({"event": event_type, "data": data})
