@@ -1,4 +1,4 @@
- from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from app.schemas.models import AnalysisRequest
 from app.services.nexus_engine import run_nexus_protocol_stream
@@ -12,7 +12,7 @@ async def analyze_endpoint(request: AnalysisRequest):
     if not request.text or not request.text.strip():
         raise HTTPException(status_code=400, detail="Null input detected.")
 
-    # TELEMETRY: Log incoming request to Puter Dashboard
+    # TELEMETRY: Log incoming request
     logger.log_event("API_GATEWAY", 0, "REQUEST_RECEIVED", f"Mode: {request.mode} | Query_Size: {len(request.text)}")
 
     try:
