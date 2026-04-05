@@ -20,7 +20,7 @@ messages=[
 {"role": "user", "content": query}
 ],
 temperature=0.8,
-max_tokens=400,
+max_tokens=500,
 top_p=0.9,
 frequency_penalty=0.7,
 presence_penalty=0.6
