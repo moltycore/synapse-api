@@ -8,7 +8,7 @@ logger = BlackboxLogger()
 
 def process_solo(query: str, client=None):
     active_client = client or (Groq(api_key=GROQ_KEY) if GROQ_KEY else None)
-    
+
     if not active_client:
         return {"route": "SHORT", "answer": "Error: GROQ_API_KEY not configured."}
 
@@ -19,11 +19,11 @@ def process_solo(query: str, client=None):
                 {"role": "system", "content": SOLO_SYSTEM},
                 {"role": "user", "content": query}
             ],
-            temperature=0.8,
+            temperature=0.7,
             max_tokens=500,
             top_p=0.9,
-            frequency_penalty=0.7,
-            presence_penalty=0.6
+            frequency_penalty=0.3,
+            presence_penalty=0.4
         )
 
         answer = completion.choices[0].message.content
@@ -31,7 +31,7 @@ def process_solo(query: str, client=None):
             return {"route": "SHORT", "answer": "Error: Null response"}
 
         payload = {"route": "SHORT", "answer": answer.strip(), "query": query}
-        
+
         return payload
 
     except Exception as e:
