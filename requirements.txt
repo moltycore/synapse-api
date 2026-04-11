@@ -4,8 +4,6 @@ groq
 cohere
 pydantic
 python-dotenv
-requests
-openai
 firebase-admin
 httpx
 pytz
