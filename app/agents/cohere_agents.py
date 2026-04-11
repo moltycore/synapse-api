@@ -2,8 +2,10 @@ import cohere
 from app.core.config import COHERE_KEY
 from app.prompts.nexus_prompts import PRIME_SYSTEM
 
+_co = cohere.ClientV2(api_key=COHERE_KEY) if COHERE_KEY else None
+
 def get_prime_res(query: str, core_data: str, ghost_data: str, void_data: str) -> str:
-    if not COHERE_KEY:
+    if not _co:
         return "Prime did not return a response."
 
     payload = (
@@ -14,8 +16,7 @@ def get_prime_res(query: str, core_data: str, ghost_data: str, void_data: str) -
     )
 
     try:
-        co = cohere.ClientV2(api_key=COHERE_KEY)
-        response = co.chat(
+        response = _co.chat(
             model="command-r-plus-08-2024",
             messages=[
                 {"role": "system", "content": PRIME_SYSTEM},
