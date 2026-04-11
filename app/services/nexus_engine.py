@@ -31,9 +31,9 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
             result = "Solo engine critical failure."
 
         solo_payload = {
-            "route": "SHORT", 
-            "core_data": "Solo analysis active.", 
-            "ghost_data": "N/A", 
+            "route": "SHORT",
+            "core_data": "Solo analysis active.",
+            "ghost_data": "N/A",
             "void_data": "N/A",
             "prime_result": result
         }
@@ -51,7 +51,7 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
             "core_data": "User approval detected.",
             "ghost_data": "N/A",
             "void_data": "N/A",
-            "prime_result": "Protocol acknowledged. Proceeding."
+            "prime_result": "Protokol onaylandı. Devam ediliyor."
         })
         return
 
@@ -61,7 +61,7 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
             "core_data": "N/A",
             "ghost_data": "N/A",
             "void_data": "N/A",
-            "prime_result": "Revision requested. Reframe your argument."
+            "prime_result": "Revizyon talebi alındı. Argümanını yeniden çerçevele."
         })
         return
 
@@ -92,9 +92,9 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
     yield emit("status", "prime")
     try:
         prime_result = get_prime_res(
-            query, 
-            json.dumps(final_core), 
-            json.dumps(ghost_data), 
+            query,
+            json.dumps(final_core),
+            json.dumps(ghost_data),
             json.dumps(void_data)
         )
     except Exception:
@@ -102,11 +102,11 @@ def run_nexus_protocol_stream(query: str, mode: str = "nexus"):
 
     final_payload = {
         "route": "COMPLEX",
-        "core_data": json.dumps(final_core), 
-        "ghost_data": json.dumps(ghost_data), 
-        "void_data": json.dumps(void_data), 
+        "core_data": json.dumps(final_core),
+        "ghost_data": json.dumps(ghost_data),
+        "void_data": json.dumps(void_data),
         "prime_result": prime_result
     }
 
     logger.sync_to_firebase({"query": query, **final_payload}, folder="chats")
-    yield emit("done", final_payload)
+    yield emit("done", final_payload)       
