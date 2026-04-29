@@ -7,3 +7,4 @@ python-dotenv
 firebase-admin
 httpx
 pytz
+slowapi
