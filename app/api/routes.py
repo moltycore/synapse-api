@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from app.schemas.models import AnalysisRequest
 from app.services.nexus_engine import run_nexus_protocol_stream
 from app.utils.blackbox_logger import BlackboxLogger
-from main import limiter
+from limiter import limiter
 
 router = APIRouter()
 logger = BlackboxLogger()
