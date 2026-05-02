@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from app.schemas.models import AnalysisRequest
 from app.services.nexus_engine import run_nexus_protocol_stream
@@ -9,7 +9,6 @@ from limiter import limiter
 router = APIRouter()
 logger = BlackboxLogger()
 
-
 def safe_stream(generator):
     try:
         yield from generator
@@ -17,7 +16,6 @@ def safe_stream(generator):
         logger.log_event("API_GATEWAY", 0, "STREAM_ERROR", str(e))
         error_payload = json.dumps({"event": "error", "data": str(e)})
         yield f"data: {error_payload}\n\n"
-
 
 @router.post("/analyze")
 @limiter.limit("10/minute")
